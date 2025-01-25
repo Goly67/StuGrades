@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StuGrade - AutoCalcu</title>
+    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/218/218656.png">
+    <link rel="stylesheet" href="docs/style.css" type="text/css">
+</head>
+
+<body>
+    <div id="loading-screen">
+        <div class="loader"></div>
+    </div>
+
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="container">
+        <h1>StuGrade - AutoCalcu</h1>
+
+        <textarea id="grade-input" placeholder="For STI Users: Please copy the grades from the first subject to the last on the ONE STI Website and paste them here.
+
+For NON-STI Users: You are required to manually enter your subjects and grades.
+
+This website is currently under development. It has been created to eliminate the need for students to use calculators. We appreciate your patience as we work on improving this platform."
+            style="width: 100%; height: 170px; margin-bottom: 5px; padding: 10px; border-radius: 8px; border: 2px solid var(--border-color);"></textarea>
+        <button class="add-subject-btn" onclick="processGrades()">Process Grades</button><br>
+
+        <select id="quarter-select">
+            <option value="1">1st Quarter</option>
+            <option value="2">2nd Quarter</option>
+            <option value="3">3rd Quarter</option>
+            <option value="4">4th Quarter</option>
+        </select>
+
+        <table id="grades-table">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Grade</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div id="average-display"></div>
+        <button class="add-subject-btn" onclick="addSubject()">Add Subject</button>
+
+    </div>
+
+    <script src="docs/scripts.js" defer></script>
+</body>
+
+</html>
