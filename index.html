@@ -152,7 +152,7 @@
         }
 
         /* IMPORTANT: your subject-name <input> is styled inline via JS;
-   these !important rules ensure readable text + correct bg. */
+    these !important rules ensure readable text + correct bg. */
         #grades-table td input[type="text"] {
             width: 100% !important;
             padding: 9px 10px !important;
@@ -287,6 +287,20 @@
             color: #111827 !important;
             /* keep inputs very readable */
         }
+
+        /* Excluded row inputs: force solid background (text + number) */
+        .excluded-row input[type="text"],
+        .excluded-row input[type="number"] {
+            background: color-mix(in srgb, var(--field-bg) 65%, var(--excluded)) !important;
+            border-color: color-mix(in srgb, var(--danger) 45%, var(--border)) !important;
+            color: var(--field-text) !important;
+        }
+
+        /* Also ensure the grade-input class never ends up transparent */
+        .excluded-row .grade-input {
+            background-color: color-mix(in srgb, var(--field-bg) 65%, var(--excluded)) !important;
+        }
+
 
         /* ---------- Average box ---------- */
         #average-display {
@@ -459,8 +473,8 @@
         }
 
         /* =========================
-   Status / Action cleanup
-   ========================= */
+    Status / Action cleanup
+    ========================= */
 
         /* Make the 3rd column (Status/Action) look structured on desktop */
         @media (min-width: 641px) {
@@ -507,7 +521,7 @@
         }
 
         /* Mobile card layout fix:
-   Prevent the button from falling under the left "label" column (your current "rigged" look). */
+    Prevent the button from falling under the left "label" column (your current "rigged" look). */
         @media (max-width: 640px) {
 
             /* Force both elements into the right column of the 2-col grid td */
@@ -607,43 +621,91 @@
             window.processGrades = function processGrades() {
                 const input = document.getElementById('grade-input').value;
                 subjects = [];
-
                 if (!input.trim()) return;
 
+                // keep lines (no empty) but DON'T depend on bullets being in a specific line
                 const lines = input
                     .replace(/\r/g, '')
                     .split('\n')
                     .map(l => l.trim())
                     .filter(Boolean);
 
+                const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ''); // remove all whitespace [web:117]
+                const isTeacherLine = (s) => String(s || '').includes('•'); // still useful anchor in your data
+                const isHeaderMerged = (s) => {
+                    const x = norm(s);
+                    return x.includes('firstquarter') && x.includes('secondquarter') && x.includes('final');
+                };
+
+                const getGradeFromLine = (s) => {
+                    const t = String(s || '').trim();
+                    if (t === '-' || t === '—') return null;
+                    const m = t.match(/\d{1,3}/); // 0-999, we'll clamp later
+                    if (!m) return null;
+                    const n = Math.max(0, Math.min(100, parseInt(m[0], 10)));
+                    return Number.isNaN(n) ? null : n;
+                };
+
                 for (let i = 0; i < lines.length; i++) {
+                    const subjectName = lines[i];
+                    const teacher = lines[i + 1];
+                    const hdr = lines[i + 2];
 
-                    if (
-                        lines[i + 1]?.includes('•') &&
-                        lines[i + 2]?.toLowerCase().includes('first quarter')
-                    ) {
-                        const subjectName = lines[i];
+                    if (!subjectName || !teacher || !hdr) continue;
 
-                        const getGrade = line => {
-                            const match = line.match(/(\d+|-)/);
-                            return match && match[1] !== '-' ? parseInt(match[1], 10) : null;
-                        };
+                    // Pattern A (NEW): header merged then 3 grade-only lines
+                    // Subject
+                    // Teacher • date
+                    // First QuarterSecond QuarterFINAL
+                    // 96
+                    // 95
+                    // -
+                    if (isTeacherLine(teacher) && isHeaderMerged(hdr)) {
+                        const g1 = getGradeFromLine(lines[i + 3]);
+                        const g2 = getGradeFromLine(lines[i + 4]);
+                        const g3 = getGradeFromLine(lines[i + 5]);
 
                         subjects.push({
                             name: subjectName,
-                            firstQuarter: getGrade(lines[i + 2]),
-                            secondQuarter: getGrade(lines[i + 3]),
-                            finalGrade: getGrade(lines[i + 4]),
+                            firstQuarter: g1,
+                            secondQuarter: g2,
+                            finalGrade: g3,
+                            isExcluded: exclusionRegex.test(subjectName)
+                        });
+
+                        i += 5;
+                        continue;
+                    }
+
+                    // Pattern B (OLD): the quarter lines themselves contain the grade
+                    // Subject
+                    // Teacher • date
+                    // First Quarter ... 96
+                    // Second Quarter ... 95
+                    // Final ... -
+                    const hdrOld = norm(hdr);
+                    if (isTeacherLine(teacher) && hdrOld.includes('firstquarter')) {
+                        const g1 = getGradeFromLine(lines[i + 2]);
+                        const g2 = getGradeFromLine(lines[i + 3]);
+                        const g3 = getGradeFromLine(lines[i + 4]);
+
+                        subjects.push({
+                            name: subjectName,
+                            firstQuarter: g1,
+                            secondQuarter: g2,
+                            finalGrade: g3,
                             isExcluded: exclusionRegex.test(subjectName)
                         });
 
                         i += 4;
+                        continue;
                     }
                 }
 
                 saveToLocalStorage();
                 renderTable();
             };
+
 
             // Add a manual subject row
             window.addSubject = function addSubject() {
@@ -677,16 +739,33 @@
             };
 
             // Update grade for the current selected quarter
-            window.updateGrade = function updateGrade(index, rawValue) {
+            window.updateGrade = function updateGrade(index, rawValue, el) {
                 if (!subjects[index]) return;
-                // allow only numbers and dash
-                const cleaned = ('' + rawValue).replace(/[^0-9\-]/g, '').slice(0, 3);
-                const val = cleaned === '-' || cleaned === '' ? null : parseInt(cleaned, 10);
-                if (currentQuarter === '1') subjects[index].firstQuarter = (val === null ? null : Math.max(0, Math.min(100, val)));
-                if (currentQuarter === '2') subjects[index].secondQuarter = (val === null ? null : Math.max(0, Math.min(100, val)));
-                if (currentQuarter === '3') subjects[index].finalGrade = (val === null ? null : Math.max(0, Math.min(100, val)));
+
+                // allow only digits
+                let cleaned = String(rawValue ?? "").replace(/[^\d]/g, "").slice(0, 3);
+                let val = cleaned === "" ? null : parseInt(cleaned, 10);
+
+                if (val !== null && !Number.isNaN(val)) {
+                    if (val > 100) {
+                        val = 100;
+
+                        // Force the visible input value back to 100 immediately
+                        if (el) el.value = "100";
+                    } else if (val < 0) {
+                        val = 0;
+                        if (el) el.value = "0";
+                    }
+                } else {
+                    val = null;
+                }
+
+                if (currentQuarter === '1') subjects[index].firstQuarter = val;
+                if (currentQuarter === '2') subjects[index].secondQuarter = val;
+                if (currentQuarter === '3') subjects[index].finalGrade = val;
+
                 saveToLocalStorage();
-                renderTable();
+                calculateAverage();
             };
 
             // Render the table UI
@@ -714,13 +793,18 @@
                     const gradeCell = document.createElement('td');
                     const gradeInput = document.createElement('input');
                     gradeInput.className = 'grade-input';
-                    gradeInput.type = 'text';
+                    gradeInput.type = 'number';
+                    gradeInput.inputMode = 'numeric';  // better mobile keypad
+                    gradeInput.min = '0';
+                    gradeInput.max = '100';
+                    gradeInput.step = '1';
+
                     let curVal = '';
                     if (currentQuarter === '1') curVal = sub.firstQuarter !== null && sub.firstQuarter !== undefined ? String(sub.firstQuarter) : '';
                     if (currentQuarter === '2') curVal = sub.secondQuarter !== null && sub.secondQuarter !== undefined ? String(sub.secondQuarter) : '';
                     if (currentQuarter === '3') curVal = sub.finalGrade !== null && sub.finalGrade !== undefined ? String(sub.finalGrade) : '';
                     gradeInput.value = curVal;
-                    gradeInput.oninput = (e) => updateGrade(idx, e.target.value);
+                    gradeInput.oninput = (e) => updateGrade(idx, e.target.value, e.target);
                     gradeInput.onpaste = (e) => {
                         e.preventDefault();
                         const pasted = e.clipboardData.getData('text');
