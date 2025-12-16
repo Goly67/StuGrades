@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>StuGrade - AutoCalcu (Updated)</title>
+    <title>StuGrade - AutoCalcu</title>
     <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/218/218656.png">
     <style>
         :root {
@@ -550,7 +550,7 @@
 <body>
     <div class="page-shell">
         <div class="container">
-            <h1>StuGrade — AutoCalcu (Updated Parser)</h1>
+            <h1>StuGrade — AutoCalcu</h1>
 
             <textarea id="grade-input"
                 placeholder="Paste your grades list exactly like the sample you gave (subject line, teacher/date line, then First Quarter / Second Quarter / Final rows)."></textarea>
@@ -569,6 +569,11 @@
                 <button style="margin-left:auto" onclick="clearStorage()" class="delete-btn">Clear Saved</button>
             </div>
 
+            <div id="average-display">No subjects added yet.</div>
+            <div class="legend">Excluded rows (Homeroom, Student Organizations / Clubs) are shown but not included in
+                the
+                average.</div>
+
             <table id="grades-table">
                 <thead>
                     <tr>
@@ -579,11 +584,6 @@
                 </thead>
                 <tbody></tbody>
             </table>
-
-            <div id="average-display">No subjects added yet.</div>
-            <div class="legend">Excluded rows (Homeroom, Student Organizations / Clubs) are shown but not included in
-                the
-                average.</div>
         </div>
     </div>
 
